@@ -51,6 +51,16 @@ export function generateUUID(): string {
 
 export function calculateOnPremSockets(datacenters: Datacenter[]): number {
   return datacenters.reduce((total, dc) => {
+    // New format with workloads array
+    if (dc.workloads && dc.workloads.length > 0) {
+      return total + dc.workloads.reduce((dcTotal, workload) => {
+        const hosts = Math.max(0, workload.hosts || 0);
+        const sockets = Math.max(0, workload.socketsPerHost || 0);
+        return dcTotal + (hosts * sockets);
+      }, 0);
+    }
+    
+    // Legacy format (single workload per datacenter)
     const hosts = Math.max(0, dc.hosts || 0);
     const sockets = Math.max(0, dc.socketsPerHost || 0);
     return total + (hosts * sockets);

@@ -84,12 +84,23 @@ export interface HypervisorOption {
   category: 'enterprise' | 'cloud' | 'specialized';
 }
 
-export interface Datacenter {
+// A workload is a hypervisor environment within a datacenter
+export interface DatacenterWorkload {
   id: string;
-  name: string;
   hypervisor: HypervisorType | '';
   hosts: number;
   socketsPerHost: number;
+}
+
+// A datacenter/location can have multiple workloads
+export interface Datacenter {
+  id: string;
+  name: string;
+  workloads: DatacenterWorkload[];
+  // Legacy fields for backward compatibility (single workload)
+  hypervisor?: HypervisorType | '';
+  hosts?: number;
+  socketsPerHost?: number;
 }
 
 // ============================================================================

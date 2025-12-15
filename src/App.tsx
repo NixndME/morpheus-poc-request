@@ -46,8 +46,11 @@ export default function App() {
     updatePOCDetails,
     addDatacenter,
     removeDatacenter,
-    updateDatacenter,
+    updateDatacenterName,
     duplicateDatacenter,
+    addWorkload,
+    removeWorkload,
+    updateWorkload,
     updatePublicCloudVMs,
     clearPublicCloud,
     addK8sCluster,
@@ -184,8 +187,11 @@ export default function App() {
                   datacenters={datacenters}
                   onAdd={addDatacenter}
                   onRemove={removeDatacenter}
-                  onUpdate={updateDatacenter}
+                  onUpdateName={updateDatacenterName}
                   onDuplicate={duplicateDatacenter}
+                  onAddWorkload={addWorkload}
+                  onRemoveWorkload={removeWorkload}
+                  onUpdateWorkload={updateWorkload}
                   totalSockets={calculations.onPremSockets}
                 />
 

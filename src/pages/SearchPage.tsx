@@ -339,24 +339,49 @@ export function SearchPage({ onBack }: SearchPageProps) {
                 <span className="text-3xl font-bold text-hpe-green-400">{formatNumber(searchResult.calculations.totalSockets)}</span>
               </div>
 
-              {/* Datacenter Details */}
-              {searchResult.datacenters.filter(dc => dc.hosts > 0).length > 0 && (
+              {/* Datacenter Details - with workloads support */}
+              {searchResult.datacenters.filter(dc => {
+                if (dc.workloads && dc.workloads.length > 0) {
+                  return dc.workloads.some(w => (w.hosts || 0) > 0);
+                }
+                return (dc.hosts || 0) > 0;
+              }).length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
                     <Server className="w-4 h-4" /> Datacenters
                   </h4>
                   <div className="space-y-2">
-                    {searchResult.datacenters.filter(dc => dc.hosts > 0).map((dc, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-morpheus-900/50 flex items-center justify-between">
-                        <div>
-                          <span className="text-gray-200">{dc.name || `Datacenter ${i + 1}`}</span>
-                          <span className="text-gray-500 text-sm ml-2">({getLabel(HYPERVISOR_OPTIONS, dc.hypervisor)})</span>
+                    {searchResult.datacenters.map((dc, i) => {
+                      // Handle new workloads format
+                      if (dc.workloads && dc.workloads.length > 0) {
+                        const validWorkloads = dc.workloads.filter(w => (w.hosts || 0) > 0);
+                        if (validWorkloads.length === 0) return null;
+                        return (
+                          <div key={i} className="p-3 rounded-lg bg-morpheus-900/50 space-y-2">
+                            <div className="text-gray-200 font-medium">{dc.name || `Datacenter ${i + 1}`}</div>
+                            {validWorkloads.map((w, wi) => (
+                              <div key={wi} className="pl-4 flex items-center justify-between text-sm border-l-2 border-purple-500/30">
+                                <span className="text-gray-500">{getLabel(HYPERVISOR_OPTIONS, w.hypervisor || '')}</span>
+                                <div className="text-gray-400">{w.hosts} hosts × {w.socketsPerHost} = <span className="text-purple-400">{(w.hosts || 0) * (w.socketsPerHost || 0)}</span></div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      // Legacy format
+                      if ((dc.hosts || 0) <= 0) return null;
+                      return (
+                        <div key={i} className="p-3 rounded-lg bg-morpheus-900/50 flex items-center justify-between">
+                          <div>
+                            <span className="text-gray-200">{dc.name || `Datacenter ${i + 1}`}</span>
+                            <span className="text-gray-500 text-sm ml-2">({getLabel(HYPERVISOR_OPTIONS, dc.hypervisor || '')})</span>
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            {dc.hosts} hosts × {dc.socketsPerHost} sockets = <span className="text-purple-400 font-medium">{(dc.hosts || 0) * (dc.socketsPerHost || 0)}</span>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-400">
-                          {dc.hosts} hosts × {dc.socketsPerHost} sockets = <span className="text-purple-400 font-medium">{dc.hosts * dc.socketsPerHost}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

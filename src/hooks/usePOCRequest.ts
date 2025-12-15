@@ -9,6 +9,7 @@ import type {
   CustomerInfo,
   POCDetails,
   Datacenter,
+  DatacenterWorkload,
   PublicCloudEntry,
   KubernetesCluster,
   IntegrationConfig,
@@ -42,12 +43,17 @@ import {
 // INITIAL STATE HELPERS
 // ============================================================================
 
-const createInitialDatacenter = (): Datacenter => ({
+const createInitialWorkload = (): DatacenterWorkload => ({
   id: generateId(),
-  name: '',
   hypervisor: '',
   hosts: 0,
   socketsPerHost: 2,
+});
+
+const createInitialDatacenter = (): Datacenter => ({
+  id: generateId(),
+  name: '',
+  workloads: [createInitialWorkload()],
 });
 
 const createInitialK8sCluster = (): KubernetesCluster => ({
@@ -170,18 +176,85 @@ export function usePOCRequest() {
     });
   }, []);
 
-  const updateDatacenter = useCallback((id: string, field: keyof Datacenter, value: string | number) => {
+  const updateDatacenterName = useCallback((id: string, name: string) => {
     setDatacenters(prev => prev.map(dc => {
       if (dc.id !== id) return dc;
-      
-      if (field === 'name' || field === 'hypervisor') {
-        return { ...dc, [field]: value as string };
-      } else if (field === 'hosts' || field === 'socketsPerHost') {
-        return { ...dc, [field]: Math.max(0, Number(value) || 0) };
+      return { ...dc, name };
+    }));
+  }, []);
+
+  // Add a new workload to a datacenter
+  const addWorkload = useCallback((datacenterId: string) => {
+    setDatacenters(prev => prev.map(dc => {
+      if (dc.id !== datacenterId) return dc;
+      return {
+        ...dc,
+        workloads: [...dc.workloads, createInitialWorkload()],
+      };
+    }));
+  }, []);
+
+  // Remove a workload from a datacenter
+  const removeWorkload = useCallback((datacenterId: string, workloadId: string) => {
+    setDatacenters(prev => prev.map(dc => {
+      if (dc.id !== datacenterId) return dc;
+      if (dc.workloads.length <= 1) return dc; // Keep at least one workload
+      return {
+        ...dc,
+        workloads: dc.workloads.filter(w => w.id !== workloadId),
+      };
+    }));
+  }, []);
+
+  // Update a specific workload
+  const updateWorkload = useCallback((
+    datacenterId: string, 
+    workloadId: string, 
+    field: keyof DatacenterWorkload, 
+    value: string | number
+  ) => {
+    setDatacenters(prev => prev.map(dc => {
+      if (dc.id !== datacenterId) return dc;
+      return {
+        ...dc,
+        workloads: dc.workloads.map(w => {
+          if (w.id !== workloadId) return w;
+          if (field === 'hypervisor') {
+            return { ...w, hypervisor: value as DatacenterWorkload['hypervisor'] };
+          } else if (field === 'hosts' || field === 'socketsPerHost') {
+            return { ...w, [field]: Math.max(0, Number(value) || 0) };
+          }
+          return w;
+        }),
+      };
+    }));
+  }, []);
+
+  // Legacy function for backward compatibility
+  const updateDatacenter = useCallback((id: string, field: keyof Datacenter, value: string | number) => {
+    if (field === 'name') {
+      updateDatacenterName(id, value as string);
+    }
+    // For legacy single-workload updates, update the first workload
+    setDatacenters(prev => prev.map(dc => {
+      if (dc.id !== id) return dc;
+      if (field === 'hypervisor' || field === 'hosts' || field === 'socketsPerHost') {
+        const workloads = dc.workloads.length > 0 ? dc.workloads : [createInitialWorkload()];
+        return {
+          ...dc,
+          workloads: workloads.map((w, i) => {
+            if (i !== 0) return w;
+            if (field === 'hypervisor') {
+              return { ...w, hypervisor: value as DatacenterWorkload['hypervisor'] };
+            } else {
+              return { ...w, [field]: Math.max(0, Number(value) || 0) };
+            }
+          }),
+        };
       }
       return dc;
     }));
-  }, []);
+  }, [updateDatacenterName]);
 
   const duplicateDatacenter = useCallback((id: string) => {
     setDatacenters(prev => {
@@ -192,6 +265,10 @@ export function usePOCRequest() {
         ...dcToDuplicate,
         id: generateId(),
         name: `${dcToDuplicate.name} (Copy)`,
+        workloads: dcToDuplicate.workloads.map(w => ({
+          ...w,
+          id: generateId(),
+        })),
       };
       
       const index = prev.findIndex(dc => dc.id === id);
@@ -358,7 +435,14 @@ export function usePOCRequest() {
       requestor,
       customer,
       pocDetails,
-      datacenters: datacenters.filter(dc => dc.hosts > 0 || dc.name),
+      datacenters: datacenters.filter(dc => {
+        // Check workloads format
+        if (dc.workloads && dc.workloads.length > 0) {
+          return dc.workloads.some(w => (w.hosts || 0) > 0) || dc.name;
+        }
+        // Legacy format
+        return (dc.hosts || 0) > 0 || dc.name;
+      }),
       publicCloud: publicCloud.filter(entry => entry.vms > 0),
       kubernetesClusters: kubernetesClusters.filter(c => c.workers > 0 || c.name),
       integrations,
@@ -398,7 +482,14 @@ export function usePOCRequest() {
   }, [pocDetails]);
 
   const hasInfrastructure = useMemo(() => {
-    const hasDatacenters = datacenters.some(dc => dc.hosts > 0);
+    const hasDatacenters = datacenters.some(dc => {
+      // Check new workloads format
+      if (dc.workloads && dc.workloads.length > 0) {
+        return dc.workloads.some(w => (w.hosts || 0) > 0);
+      }
+      // Legacy format
+      return (dc.hosts || 0) > 0;
+    });
     const hasPublicCloud = publicCloud.some(entry => entry.vms > 0);
     const hasKubernetes = kubernetesClusters.some(c => c.workers > 0);
     return hasDatacenters || hasPublicCloud || hasKubernetes;
@@ -452,7 +543,13 @@ export function usePOCRequest() {
     addDatacenter,
     removeDatacenter,
     updateDatacenter,
+    updateDatacenterName,
     duplicateDatacenter,
+    
+    // Workload handlers (for multiple workloads per datacenter)
+    addWorkload,
+    removeWorkload,
+    updateWorkload,
     
     // Public cloud handlers
     updatePublicCloudVMs,

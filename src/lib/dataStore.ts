@@ -603,7 +603,9 @@ export function loadDemoData(): void {
         environmentReady: true,
       },
       datacenters: [
-        { id: 'dc1', name: 'Sydney DC1', hypervisor: 'vmware-vsphere', hosts: 12, socketsPerHost: 2 }
+        { id: 'dc1', name: 'Sydney DC1', workloads: [
+          { id: 'w1', hypervisor: 'vmware-vsphere', hosts: 12, socketsPerHost: 2 }
+        ]}
       ],
       publicCloud: [{ provider: 'aws', vms: 45 }],
       kubernetesClusters: [
@@ -652,7 +654,9 @@ export function loadDemoData(): void {
         environmentReady: false,
       },
       datacenters: [
-        { id: 'dc2', name: 'Singapore DC', hypervisor: 'nutanix-ahv', hosts: 8, socketsPerHost: 2 }
+        { id: 'dc2', name: 'Singapore DC', workloads: [
+          { id: 'w2', hypervisor: 'nutanix-ahv', hosts: 8, socketsPerHost: 2 }
+        ]}
       ],
       publicCloud: [{ provider: 'aws', vms: 120 }, { provider: 'azure', vms: 80 }],
       kubernetesClusters: [

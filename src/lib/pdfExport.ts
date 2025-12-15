@@ -167,8 +167,17 @@ export function exportPOCToPDF(request: POCRequest): void {
 
   yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
 
-  // Datacenter Details
-  if (request.datacenters.length > 0 && request.datacenters.some(dc => dc.hosts > 0)) {
+  // Datacenter Details - now with workloads support
+  const hasDatacenterData = request.datacenters.length > 0 && request.datacenters.some(dc => {
+    // Check new workloads format
+    if (dc.workloads && dc.workloads.length > 0) {
+      return dc.workloads.some(w => w.hosts > 0);
+    }
+    // Legacy format
+    return (dc.hosts || 0) > 0;
+  });
+
+  if (hasDatacenterData) {
     if (yPos > 230) {
       doc.addPage();
       yPos = 20;
@@ -180,18 +189,36 @@ export function exportPOCToPDF(request: POCRequest): void {
     doc.text('Datacenter Details', 14, yPos);
     yPos += 6;
 
+    // Build rows from datacenters with workloads
+    const datacenterRows: string[][] = [];
+    request.datacenters.forEach(dc => {
+      if (dc.workloads && dc.workloads.length > 0) {
+        // New format with workloads
+        dc.workloads.filter(w => w.hosts > 0).forEach((w, idx) => {
+          datacenterRows.push([
+            dc.name ? (idx === 0 ? dc.name : `  └ ${dc.name}`) : 'Unnamed',
+            getLabel(HYPERVISOR_OPTIONS, w.hypervisor || ''),
+            String(w.hosts),
+            String(w.socketsPerHost),
+            String((w.hosts || 0) * (w.socketsPerHost || 0)),
+          ]);
+        });
+      } else if ((dc.hosts || 0) > 0) {
+        // Legacy format
+        datacenterRows.push([
+          dc.name || 'Unnamed',
+          getLabel(HYPERVISOR_OPTIONS, dc.hypervisor || ''),
+          String(dc.hosts || 0),
+          String(dc.socketsPerHost || 0),
+          String((dc.hosts || 0) * (dc.socketsPerHost || 0)),
+        ]);
+      }
+    });
+
     autoTable(doc, {
       startY: yPos,
-      head: [['Name', 'Hypervisor', 'Hosts', 'Sockets/Host', 'Total Sockets']],
-      body: request.datacenters
-        .filter(dc => dc.hosts > 0)
-        .map(dc => [
-          dc.name || 'Unnamed',
-          getLabel(HYPERVISOR_OPTIONS, dc.hypervisor),
-          String(dc.hosts),
-          String(dc.socketsPerHost),
-          String(dc.hosts * dc.socketsPerHost),
-        ]),
+      head: [['Location', 'Hypervisor', 'Hosts', 'Sockets/Host', 'Total Sockets']],
+      body: datacenterRows,
       theme: 'striped',
       headStyles: { fillColor: [100, 100, 180] },
       margin: { left: 14, right: 14 },

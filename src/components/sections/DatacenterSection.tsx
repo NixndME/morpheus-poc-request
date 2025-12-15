@@ -1,8 +1,8 @@
 /**
  * On-Premises / Private Cloud Datacenter Section
  * 
- * Allows adding multiple datacenters with hypervisor selection,
- * host count, and sockets per host configuration.
+ * Allows adding multiple datacenters/locations, each with multiple
+ * hypervisor workloads (different hypervisors, host counts, etc.)
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,8 +14,12 @@ import {
   HardDrive,
   Cpu,
   Info,
+  Layers,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import type { Datacenter } from '../../types';
+import { useState } from 'react';
+import type { Datacenter, DatacenterWorkload } from '../../types';
 import { HYPERVISOR_GROUPS, SOCKET_PRESETS } from '../../data/constants';
 import { formatNumber } from '../../lib/utils';
 
@@ -23,8 +27,11 @@ interface DatacenterSectionProps {
   datacenters: Datacenter[];
   onAdd: () => void;
   onRemove: (id: string) => void;
-  onUpdate: (id: string, field: keyof Datacenter, value: string | number) => void;
+  onUpdateName: (id: string, name: string) => void;
   onDuplicate: (id: string) => void;
+  onAddWorkload: (datacenterId: string) => void;
+  onRemoveWorkload: (datacenterId: string, workloadId: string) => void;
+  onUpdateWorkload: (datacenterId: string, workloadId: string, field: keyof DatacenterWorkload, value: string | number) => void;
   totalSockets: number;
 }
 
@@ -32,8 +39,11 @@ export function DatacenterSection({
   datacenters,
   onAdd,
   onRemove,
-  onUpdate,
+  onUpdateName,
   onDuplicate,
+  onAddWorkload,
+  onRemoveWorkload,
+  onUpdateWorkload,
   totalSockets,
 }: DatacenterSectionProps) {
   return (
@@ -51,7 +61,7 @@ export function DatacenterSection({
           </div>
           <div>
             <h2 className="section-title text-lg">On-Premises / Private Cloud</h2>
-            <p className="section-subtitle">Configure datacenters and hypervisor hosts</p>
+            <p className="section-subtitle">Configure datacenters with multiple workloads</p>
           </div>
         </div>
         
@@ -79,8 +89,11 @@ export function DatacenterSection({
               index={index}
               isOnly={datacenters.length === 1}
               onRemove={() => onRemove(dc.id)}
-              onUpdate={(field, value) => onUpdate(dc.id, field, value)}
+              onUpdateName={(name) => onUpdateName(dc.id, name)}
               onDuplicate={() => onDuplicate(dc.id)}
+              onAddWorkload={() => onAddWorkload(dc.id)}
+              onRemoveWorkload={(workloadId) => onRemoveWorkload(dc.id, workloadId)}
+              onUpdateWorkload={(workloadId, field, value) => onUpdateWorkload(dc.id, workloadId, field, value)}
             />
           ))}
         </AnimatePresence>
@@ -97,7 +110,7 @@ export function DatacenterSection({
                    transition-all duration-200"
       >
         <Plus className="w-5 h-5" />
-        Add Datacenter
+        Add Datacenter / Location
       </motion.button>
 
       {/* Calculation Info */}
@@ -106,7 +119,7 @@ export function DatacenterSection({
           <Info className="w-4 h-4 mt-0.5 text-gray-600" />
           <span>
             <strong className="text-gray-400">Calculation:</strong>{' '}
-            On-Prem Sockets = Σ (Hosts × Sockets per Host) across all datacenters
+            On-Prem Sockets = Σ (Hosts × Sockets per Host) across all workloads in all datacenters
           </span>
         </div>
       </div>
@@ -123,8 +136,11 @@ interface DatacenterCardProps {
   index: number;
   isOnly: boolean;
   onRemove: () => void;
-  onUpdate: (field: keyof Datacenter, value: string | number) => void;
+  onUpdateName: (name: string) => void;
   onDuplicate: () => void;
+  onAddWorkload: () => void;
+  onRemoveWorkload: (workloadId: string) => void;
+  onUpdateWorkload: (workloadId: string, field: keyof DatacenterWorkload, value: string | number) => void;
 }
 
 function DatacenterCard({
@@ -132,10 +148,20 @@ function DatacenterCard({
   index,
   isOnly,
   onRemove,
-  onUpdate,
+  onUpdateName,
   onDuplicate,
+  onAddWorkload,
+  onRemoveWorkload,
+  onUpdateWorkload,
 }: DatacenterCardProps) {
-  const dcSockets = (datacenter.hosts || 0) * (datacenter.socketsPerHost || 0);
+  const [isExpanded, setIsExpanded] = useState(true);
+  
+  // Calculate total sockets for this datacenter
+  const dcSockets = (datacenter.workloads || []).reduce((total, w) => {
+    return total + ((w.hosts || 0) * (w.socketsPerHost || 0));
+  }, 0);
+
+  const workloadCount = datacenter.workloads?.length || 0;
 
   return (
     <motion.div
@@ -144,27 +170,51 @@ function DatacenterCard({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, x: -20 }}
       transition={{ duration: 0.2 }}
-      className="p-4 rounded-xl bg-morpheus-900/40 border border-morpheus-800/40 
-                 hover:border-morpheus-700/50 transition-colors"
+      className="rounded-xl bg-morpheus-900/40 border border-morpheus-800/40 
+                 hover:border-morpheus-700/50 transition-colors overflow-hidden"
     >
       {/* Card Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 
-                          text-xs font-bold flex items-center justify-center">
+      <div className="p-4 flex items-center justify-between border-b border-morpheus-800/30">
+        <div className="flex items-center gap-3 flex-1">
+          <span className="w-7 h-7 rounded-full bg-purple-500/20 text-purple-400 
+                          text-sm font-bold flex items-center justify-center shrink-0">
             {index + 1}
           </span>
-          <span className="text-sm font-medium text-gray-300">
-            {datacenter.name || `Datacenter ${index + 1}`}
-          </span>
+          
+          {/* Datacenter Name Input */}
+          <input
+            type="text"
+            value={datacenter.name}
+            onChange={(e) => onUpdateName(e.target.value)}
+            placeholder={`Datacenter ${index + 1} (e.g., Sydney DC1)`}
+            className="bg-transparent border-none text-gray-200 font-medium text-sm 
+                       placeholder-gray-600 focus:outline-none focus:ring-0 flex-1 min-w-0"
+          />
         </div>
         
-        {/* Socket count for this DC */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">
-            {formatNumber(dcSockets)} sockets
-          </span>
+        {/* Stats and Actions */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <Layers className="w-3 h-3" />
+              {workloadCount} workload{workloadCount !== 1 ? 's' : ''}
+            </span>
+            <span className="text-gray-600">•</span>
+            <span className="flex items-center gap-1 text-purple-400">
+              <Cpu className="w-3 h-3" />
+              {formatNumber(dcSockets)} sockets
+            </span>
+          </div>
+          
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 
+                       hover:bg-morpheus-800/50 transition-colors"
+              title={isExpanded ? "Collapse" : "Expand"}
+            >
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
             <button
               onClick={onDuplicate}
               className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 
@@ -187,33 +237,108 @@ function DatacenterCard({
         </div>
       </div>
 
-      {/* Card Fields */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Datacenter Name */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            Name
-          </label>
-          <input
-            type="text"
-            value={datacenter.name}
-            onChange={(e) => onUpdate('name', e.target.value)}
-            placeholder="e.g., Sydney DC1"
-            className="input-field-compact"
-          />
-        </div>
-
-        {/* Hypervisor */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            Hypervisor
-          </label>
-          <select
-            value={datacenter.hypervisor}
-            onChange={(e) => onUpdate('hypervisor', e.target.value)}
-            className="select-field py-2.5 text-sm"
+      {/* Workloads Section - Collapsible */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
           >
-            <option value="">Select hypervisor...</option>
+            <div className="p-4 space-y-3">
+              {/* Workloads */}
+              {(datacenter.workloads || []).map((workload, wIndex) => (
+                <WorkloadRow
+                  key={workload.id}
+                  workload={workload}
+                  index={wIndex}
+                  isOnly={(datacenter.workloads?.length || 0) <= 1}
+                  onRemove={() => onRemoveWorkload(workload.id)}
+                  onUpdate={(field, value) => onUpdateWorkload(workload.id, field, value)}
+                />
+              ))}
+
+              {/* Add Workload Button */}
+              <button
+                onClick={onAddWorkload}
+                className="w-full py-2 border border-dashed border-morpheus-700/40 rounded-lg
+                           text-gray-500 text-sm font-medium flex items-center justify-center gap-2
+                           hover:border-purple-500/40 hover:text-purple-400 hover:bg-purple-500/5
+                           transition-all duration-200"
+              >
+                <Plus className="w-4 h-4" />
+                Add Workload
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ============================================================================
+// WORKLOAD ROW COMPONENT
+// ============================================================================
+
+interface WorkloadRowProps {
+  workload: DatacenterWorkload;
+  index: number;
+  isOnly: boolean;
+  onRemove: () => void;
+  onUpdate: (field: keyof DatacenterWorkload, value: string | number) => void;
+}
+
+function WorkloadRow({
+  workload,
+  index,
+  isOnly,
+  onRemove,
+  onUpdate,
+}: WorkloadRowProps) {
+  const workloadSockets = (workload.hosts || 0) * (workload.socketsPerHost || 0);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="p-3 rounded-lg bg-morpheus-800/30 border border-morpheus-700/30"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-medium text-gray-500">
+          Workload {index + 1}
+        </span>
+        <span className="text-xs text-gray-600">•</span>
+        <span className="text-xs text-purple-400">
+          {formatNumber(workloadSockets)} sockets
+        </span>
+        <div className="flex-1" />
+        {!isOnly && (
+          <button
+            onClick={onRemove}
+            className="p-1 rounded text-gray-600 hover:text-red-400 
+                     hover:bg-red-500/10 transition-colors"
+            title="Remove workload"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {/* Hypervisor */}
+        <div className="space-y-1">
+          <label className="text-xs text-gray-600">Hypervisor</label>
+          <select
+            value={workload.hypervisor}
+            onChange={(e) => onUpdate('hypervisor', e.target.value)}
+            className="select-field py-2 text-sm"
+          >
+            <option value="">Select...</option>
             <optgroup label="Enterprise">
               {HYPERVISOR_GROUPS.enterprise.map(h => (
                 <option key={h.value} value={h.value}>{h.label}</option>
@@ -233,15 +358,15 @@ function DatacenterCard({
         </div>
 
         {/* Number of Hosts */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1">
+        <div className="space-y-1">
+          <label className="text-xs text-gray-600 flex items-center gap-1">
             <HardDrive className="w-3 h-3" />
             Hosts
           </label>
           <input
             type="number"
             min="0"
-            value={datacenter.hosts || ''}
+            value={workload.hosts || ''}
             onChange={(e) => onUpdate('hosts', parseInt(e.target.value) || 0)}
             placeholder="0"
             className="input-field-compact no-spinners"
@@ -249,24 +374,22 @@ function DatacenterCard({
         </div>
 
         {/* Sockets per Host */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1">
+        <div className="space-y-1">
+          <label className="text-xs text-gray-600 flex items-center gap-1">
             <Cpu className="w-3 h-3" />
             Sockets/Host
           </label>
-          <div className="flex gap-2">
-            <select
-              value={datacenter.socketsPerHost}
-              onChange={(e) => onUpdate('socketsPerHost', parseInt(e.target.value))}
-              className="select-field py-2.5 text-sm flex-1"
-            >
-              {SOCKET_PRESETS.map(preset => (
-                <option key={preset.value} value={preset.value}>
-                  {preset.value} ({preset.label})
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={workload.socketsPerHost}
+            onChange={(e) => onUpdate('socketsPerHost', parseInt(e.target.value))}
+            className="select-field py-2 text-sm"
+          >
+            {SOCKET_PRESETS.map(preset => (
+              <option key={preset.value} value={preset.value}>
+                {preset.value} ({preset.label})
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     </motion.div>
