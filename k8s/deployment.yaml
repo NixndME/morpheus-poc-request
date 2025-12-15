@@ -1,0 +1,171 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: morpheus-poc-db-secret
+  namespace: morpheus-poc
+type: Opaque
+stringData:
+  DB_HOST: database-1.cj2ei24coeje.ap-south-1.rds.amazonaws.com
+  DB_PORT: "5432"
+  DB_NAME: morpheus_poc
+  DB_SCHEMA: poc_tracker
+  DB_USER: postgres
+  DB_PASSWORD: xxxxxxxxx
+  DB_SSL: "true"
+  DB_SSL_REJECT_UNAUTHORIZED: "false"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: morpheus-poc-pvc
+  namespace: morpheus-poc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: morpheus-poc-app
+  namespace: morpheus-poc
+  labels:
+    app: morpheus-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: morpheus-poc
+  template:
+    metadata:
+      labels:
+        app: morpheus-poc
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: morpheus-poc
+        image: nixndme/morpheus-poc-request:20
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 3001
+            protocol: TCP
+
+        env:
+          - name: PORT
+            value: "3001"
+          - name: NODE_ENV
+            value: "production"
+          - name: CORS_ORIGIN
+            value: "*"
+          - name: DB_HOST
+            valueFrom:
+              secretKeyRef:
+                name: morpheus-poc-db-secret
+                key: DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              secretKeyRef:
+                name: morpheus-poc-db-secret
+                key: DB_PORT
+          - name: DB_NAME
+            valueFrom:
+              secretKeyRef:
+                name: morpheus-poc-db-secret
+                key: DB_NAME
+          - name: DB_SCHEMA
+            valueFrom:
+              secretKeyRef:
+                name: morpheus-poc-db-secret
+                key: DB_SCHEMA
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: morpheus-poc-db-secret
+                key: DB_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: morpheus-poc-db-secret
+                key: DB_PASSWORD
+          - name: DB_SSL
+            valueFrom:
+              secretKeyRef:
+                name: morpheus-poc-db-secret
+                key: DB_SSL
+          - name: DB_SSL_REJECT_UNAUTHORIZED
+            valueFrom:
+              secretKeyRef:
+                name: morpheus-poc-db-secret
+                key: DB_SSL_REJECT_UNAUTHORIZED
+
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+
+        volumeMounts:
+          - name: morpheus-poc-vol
+            mountPath: /app/data
+      volumes:
+        - name: morpheus-poc-vol
+          persistentVolumeClaim:
+            claimName: morpheus-poc-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: morpheus-poc-svc
+  namespace: morpheus-poc
+  labels:
+    app: morpheus-poc
+spec:
+  selector:
+    app: morpheus-poc
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 3001
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: morpheus-poc-ingress
+  namespace: morpheus-poc
+  labels:
+    app: morpheus-poc
+spec:
+  rules:
+    - host: pocrequest.init0xff.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: morpheus-poc-svc
+                port:
+                  number: 80

@@ -1,0 +1,59 @@
+version: '3.8'
+
+# =============================================================================
+# LOCAL TESTING with PostgreSQL
+# =============================================================================
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: morpheus-poc-db
+    environment:
+      POSTGRES_DB: morpheus_poc
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: localdev123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d morpheus_poc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - morpheus-net
+
+  # Combined App (Backend + Frontend)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: morpheus-poc-app
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: morpheus_poc
+      DB_SCHEMA: poc_tracker
+      DB_USER: admin
+      DB_PASSWORD: localdev123
+      DB_SSL: "false"
+      CORS_ORIGIN: "*"
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - morpheus-net
+
+volumes:
+  postgres_data:
+
+networks:
+  morpheus-net:
+    driver: bridge

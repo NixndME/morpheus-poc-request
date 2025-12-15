@@ -1,0 +1,202 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  :root {
+    --gradient-primary: linear-gradient(135deg, #01A982 0%, #017a5a 100%);
+    --gradient-dark: linear-gradient(180deg, #0a0f1a 0%, #1e242f 100%);
+    --gradient-card: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  }
+
+  * {
+    @apply border-morpheus-700/30;
+  }
+
+  body {
+    @apply bg-slate-dark text-gray-100 font-body antialiased;
+    background: var(--gradient-dark);
+    min-height: 100vh;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-morpheus-900/30;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-morpheus-600/50 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-morpheus-500/70;
+  }
+}
+
+@layer components {
+  /* Glass card effect */
+  .glass-card {
+    @apply bg-morpheus-950/60 backdrop-blur-xl border border-morpheus-800/40 rounded-2xl;
+    box-shadow: 
+      0 4px 24px -4px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card-elevated {
+    @apply glass-card;
+    box-shadow: 
+      0 8px 32px -8px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* Input field styling */
+  .input-field {
+    @apply w-full bg-morpheus-900/50 border border-morpheus-700/50 rounded-xl px-4 py-3
+           text-gray-100 placeholder-gray-500
+           focus:outline-none focus:border-hpe-green-500/60 focus:ring-2 focus:ring-hpe-green-500/20
+           transition-all duration-200;
+  }
+
+  .input-field-compact {
+    @apply input-field py-2.5 text-sm;
+  }
+
+  /* Select dropdown styling */
+  .select-field {
+    @apply input-field appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-hpe-green-500 to-hpe-green-600 
+           text-white font-semibold rounded-xl
+           hover:from-hpe-green-400 hover:to-hpe-green-500
+           focus:outline-none focus:ring-2 focus:ring-hpe-green-500/50 focus:ring-offset-2 focus:ring-offset-morpheus-950
+           active:scale-[0.98] transition-all duration-200
+           shadow-lg shadow-hpe-green-500/25;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-morpheus-800/60 border border-morpheus-600/50
+           text-gray-200 font-medium rounded-xl
+           hover:bg-morpheus-700/60 hover:border-morpheus-500/50
+           focus:outline-none focus:ring-2 focus:ring-morpheus-500/30
+           active:scale-[0.98] transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 text-gray-400 font-medium rounded-lg
+           hover:text-gray-200 hover:bg-morpheus-800/40
+           focus:outline-none focus:ring-2 focus:ring-morpheus-600/30
+           transition-all duration-200;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-red-500/10 border border-red-500/30
+           text-red-400 font-medium rounded-lg
+           hover:bg-red-500/20 hover:border-red-500/50
+           focus:outline-none focus:ring-2 focus:ring-red-500/30
+           transition-all duration-200;
+  }
+
+  /* Section title */
+  .section-title {
+    @apply text-xl font-display font-bold text-gray-100 flex items-center gap-3;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-gray-500 mt-1;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply glass-card p-6 flex flex-col gap-2;
+  }
+
+  .stat-value {
+    @apply text-4xl font-display font-bold text-hpe-green-400;
+  }
+
+  .stat-label {
+    @apply text-sm text-gray-400 font-medium;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-green {
+    @apply badge bg-hpe-green-500/15 text-hpe-green-400 border border-hpe-green-500/30;
+  }
+
+  .badge-blue {
+    @apply badge bg-blue-500/15 text-blue-400 border border-blue-500/30;
+  }
+
+  .badge-purple {
+    @apply badge bg-purple-500/15 text-purple-400 border border-purple-500/30;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    @apply absolute z-50 px-3 py-2 text-sm text-gray-200 bg-morpheus-800 
+           border border-morpheus-600/50 rounded-lg shadow-xl
+           opacity-0 pointer-events-none transition-opacity duration-200;
+  }
+
+  .tooltip-visible {
+    @apply opacity-100 pointer-events-auto;
+  }
+}
+
+@layer utilities {
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-hpe-green-400 to-hpe-green-300;
+  }
+
+  /* Noise texture overlay */
+  .noise-overlay {
+    position: relative;
+  }
+
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  /* Glow effect */
+  .glow-green {
+    box-shadow: 0 0 60px -20px rgba(1, 169, 130, 0.4);
+  }
+
+  /* Number input without spinners */
+  .no-spinners::-webkit-outer-spin-button,
+  .no-spinners::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .no-spinners[type="number"] {
+    -moz-appearance: textfield;
+  }
+}
