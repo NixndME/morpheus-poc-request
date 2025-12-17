@@ -5,7 +5,7 @@
  */
 
 import { motion } from 'framer-motion';
-import { FileText, Calendar, Target, Clock, AlertTriangle, DollarSign, CheckCircle } from 'lucide-react';
+import { FileText, Calendar, Target, Clock, AlertTriangle, DollarSign, CheckCircle, Info } from 'lucide-react';
 import type { POCDetails } from '../../types';
 import { POC_DURATION_OPTIONS, DEAL_SIZE_OPTIONS } from '../../data/constants';
 import { cn, formatDate, getDaysRemaining } from '../../lib/utils';
@@ -158,6 +158,44 @@ export function POCDetailsSection({ pocDetails, onUpdate, isValid }: POCDetailsS
               <CheckCircle className="w-4 h-4 text-gray-500" />
               POC Environment Ready?
               <span className="text-red-400">*</span>
+              {/* Info Tooltip */}
+              <div className="relative group">
+                <Info className="w-4 h-4 text-gray-500 hover:text-hpe-green-400 cursor-help transition-colors" />
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 p-3 rounded-lg 
+                                bg-morpheus-800 border border-morpheus-700 shadow-xl
+                                opacity-0 invisible group-hover:opacity-100 group-hover:visible 
+                                transition-all duration-200 z-50">
+                  <div className="text-xs text-gray-300 space-y-2">
+                    <p className="font-semibold text-hpe-green-400 mb-2">Environment Ready Criteria:</p>
+                    <ul className="space-y-1 text-gray-400">
+                      <li className="flex items-start gap-2">
+                        <span className="text-hpe-green-400 mt-0.5">✓</span>
+                        <span>Hypervisor infrastructure provisioned</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-hpe-green-400 mt-0.5">✓</span>
+                        <span>Network connectivity configured</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-hpe-green-400 mt-0.5">✓</span>
+                        <span>Required credentials available</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-hpe-green-400 mt-0.5">✓</span>
+                        <span>Firewall rules / ports opened</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-hpe-green-400 mt-0.5">✓</span>
+                        <span>Customer resources allocated</span>
+                      </li>
+                    </ul>
+                  </div>
+                  {/* Tooltip arrow */}
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 
+                                  border-l-8 border-r-8 border-t-8 
+                                  border-l-transparent border-r-transparent border-t-morpheus-700" />
+                </div>
+              </div>
             </label>
             <div className="flex gap-4 pt-2">
               <label className={cn(

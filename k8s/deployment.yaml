@@ -10,7 +10,7 @@ stringData:
   DB_NAME: morpheus_poc
   DB_SCHEMA: poc_tracker
   DB_USER: postgres
-  DB_PASSWORD: xxxxxxxxx
+  DB_PASSWORD: dIBLP1FEKcg5sMvVQHF4
   DB_SSL: "true"
   DB_SSL_REJECT_UNAUTHORIZED: "false"
 ---
@@ -47,7 +47,7 @@ spec:
       restartPolicy: Always
       containers:
       - name: morpheus-poc
-        image: nixndme/morpheus-poc-request:21
+        image: nixndme/morpheus-poc-request:22
         imagePullPolicy: Always
         ports:
           - containerPort: 3001

@@ -70,7 +70,7 @@ import {
 } from '../data/constants';
 
 // Admin password - In production, this should be handled by proper authentication
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'morpheuspassword';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'morpheus2024';
 
 interface AdminPageProps {
   onBack: () => void;
